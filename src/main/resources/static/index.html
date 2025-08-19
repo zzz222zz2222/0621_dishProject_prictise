@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>外卖组件</title>
+    <link rel="stylesheet" href="js/bootstrap/dist/css/bootstrap.min.css">
+    <script src="js/jquery/dist/jquery.min.js"></script>
+    <script src="js/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="js/my.js"></script>
+    <link rel="stylesheet" href="https://cdn.staticfile.net/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+
+<body>
+<div class="container">
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <ul class="nav nav-pills" id="nav-pills">
+                <li class="active"><a href="javascript:void(0)" onclick="loadContent('form.html',this)">首页</a></li>
+                <li><a href="javascript:void(0)" onclick="loadContent('customer_manage.html',this)">用户管理</a></li>
+                <li><a href="javascript:void(0)" onclick="loadContent('seller_manage.html',this)">商家管理</a></li>
+                <li><a href="javascript:void(0)"onclick="loadContent('orders.html',this)">订单管理</a></li>
+                <li><a href="javascript:void(0)">其他管理1</a></li>
+                <li><a href="javascript:void(0)">其他管理2</a></li>
+                <li class="dropdown pull-right">
+                    <a href="#" data-toggle="dropdown" class="dropdown-toggle">下拉<strong class="caret"></strong></a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a href="#">操作</a>
+                        </li>
+                        <li>
+                            <a href="#">设置栏目</a>
+                        </li>
+                        <li>
+                            <a href="#">更多设置</a>
+                        </li>
+                        <li class="divider">
+                        </li>
+                        <li>
+                            <a href="#">分割线</a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+        </div>
+    </div>
+    <!-- 功能 -->
+    <div class="row clearfix">
+        <div class="col-md-12 column"  id="contentDiv">
+
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+
+			//todo
+			var userType = sessionStorage.getItem("userType")
+
+			if (userType!="admin"){
+				//跳转。login
+				window.location.href="login.html";
+			}
+
+			//todo
+
+    const contentDiv = document.getElementById('contentDiv');
+       // 使用AJAX加载内容到div中
+       function loadContent(url,ele) {
+           $("#nav-pills li").removeClass('active');
+           // 为当前点击的a标签所在的li添加active类
+           $(ele).parent('li').addClass('active');
+
+
+         // 显示加载状态
+         contentDiv.innerHTML = `
+           <div class="text-center">
+             <i class="fa fa-spinner fa-spin fa-3x fa-fw"></i>
+             <p>加载中...</p>
+           </div> `;
+
+
+
+         $.ajax({
+         url:url,
+         success:function(data){
+           contentDiv.innerHTML = data;
+           executeScriptsInContent(contentDiv);
+         },
+         error:function(xhr,status,error){
+           console.error('加载内容出错:', error);
+           contentDiv.innerHTML = `
+             <div class="alert alert-danger">
+               <h4>加载失败</h4>
+               <p>无法加载内容: ${url}</p>
+               <p>${error.message}</p>
+             </div>
+           `;
+         }
+         })
+
+
+       }
+
+       // 执行新加载内容中的脚本
+       function executeScriptsInContent(container) {
+         const scripts = container.querySelectorAll('script');
+         scripts.forEach(oldScript => {
+           const newScript = document.createElement('script');
+           Array.from(oldScript.attributes).forEach(attr => {
+             newScript.setAttribute(attr.name, attr.value);
+           });
+           newScript.textContent = oldScript.textContent;
+           oldScript.parentNode.replaceChild(newScript, oldScript);
+         });
+       }
+
+      loadContent('form.html',document.querySelector('#nav-pills li:first-child a'));
+
+</script>
+</body>
+</html>

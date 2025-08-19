@@ -1,0 +1,278 @@
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>订单管理</title>
+<link rel="stylesheet" href="js/bootstrap/dist/css/bootstrap.min.css">
+<script src="js/jquery/dist/jquery.min.js"></script>
+<script src="js/bootstrap/dist/js/bootstrap.min.js"></script>
+<script src="js/my.js"></script>
+
+<div class="container">
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <table class="table table-bordered table-hover">
+                <thead>
+                <tr class="info">
+                    <th>订单编号</th>
+                    <th>客户号</th>
+                    <th>下单时间</th>
+                    <th>订单状态</th>
+                    <th>订单总金额</th>
+                    <th>配送地址</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody id="disorders"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 增加/修改界面 -->
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <div id="njzpc" class="alert alert-info"></div>
+            <form role="form" method="post" id="ordersForm" enctype="multipart/form-data" class="form-horizontal">
+                <input type="hidden" id="action" name="action" value="insert">
+                <input type="hidden" id="oldoid" name="oldoid" value="-1">
+
+                <div class="form-group">
+                    <label for="oid" class="col-sm-2 control-label">订单编号</label>
+                    <div class="col-sm-10">
+                        <input type="number" class="form-control" id="oid" name="oid" placeholder="请输入订单编号(1-99999)" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="cid" class="col-sm-2 control-label">客户号</label>
+                    <div class="col-sm-10">
+                        <input type="number" class="form-control" id="cid" name="cid" placeholder="请输入客户号" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="orderTime" class="col-sm-2 control-label">下单时间</label>
+                    <div class="col-sm-10">
+                        <input type="datetime-local" class="form-control" id="orderTime" name="orderTime" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="status" class="col-sm-2 control-label">订单状态</label>
+                    <div class="col-sm-10">
+                        <select class="form-control" id="status" name="status" required>
+                            <option value="待付款">待付款</option>
+                            <option value="已付款">已付款</option>
+                            <option value="配送中">配送中</option>
+                            <option value="已完成">已完成</option>
+                            <option value="已取消">已取消</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="ototol" class="col-sm-2 control-label">订单总金额</label>
+                    <div class="col-sm-10">
+                        <input type="number" class="form-control" id="ototol" name="ototol" placeholder="请输入订单总金额" step="0.01" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="address" class="col-sm-2 control-label">配送地址</label>
+                    <div class="col-sm-10">
+                        <textarea class="form-control" id="address" name="address" rows="3" placeholder="请输入配送地址" required></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="tupian" class="col-sm-2 control-label">图片</label>
+                    <div class="col-sm-10">
+                        <input type="file" class="form-control" id="tupian" name="tupian">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-10">
+                        <button type="button" id="btnZpc" class="btn btn-primary" onclick="verifyInput()">增加</button>
+                        <button type="reset" class="btn btn-default">重置</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 日期格式化函数
+    function formatDateTime(datetimeStr) {
+        if (!datetimeStr) return '';
+        const date = new Date(datetimeStr);
+        return date.toLocaleString();
+    }
+
+    // 显示订单列表
+    function displayorders() {
+        $.ajax({
+            url: "api/orders",
+            type: "GET",
+            dataType: "json",
+            success: function(response) {
+                var html = '';
+                response.forEach(function(order) {
+                    html += `
+                   <tr>
+    <td>${order.oid}</td>
+    <td>${order.cid}</td>
+    <td>${formatDateTime(order.orderTime)}</td>
+    <td>${order.status}</td>  <!-- 修改这里 -->
+    <td>¥${order.ototol}</td>
+    <td>${order.oaddress}</td>
+    <td>
+        <button type="button" class="btn btn-warning btn-sm"
+            onclick="edit('${order.oid}', '${order.cid}', '${order.orderTime}',
+            '${order.status}', '${order.ototol}', '${order.oaddress}')">  <!-- 修改这里 -->
+            <span class="glyphicon glyphicon-edit"></span> 修改
+        </button>
+    </td>
+</tr>`;
+                });
+                $("#disorders").html(html);
+            },
+            error: function(xhr, status, error) {
+                $("#njzpc").html("加载订单失败: " + error);
+                console.error("Error:", error);
+            }
+        });
+    }
+
+    // 删除订单
+    function deleteorders(oid) {
+        if (confirm("确定要删除订单 " + oid + " 吗？")) {
+            $.ajax({
+                url: "api/orders?oid=" + oid,
+                type: "DELETE",
+                success: function(response) {
+                    if (response === "success") {
+                        $("#njzpc").html("订单删除成功");
+                        displayorders();
+                    } else {
+                        $("#njzpc").html("订单删除失败");
+                    }
+                },
+                error: function(xhr) {
+                    $("#njzpc").html("删除请求失败");
+                    console.error(xhr);
+                }
+            });
+        }
+    }
+
+    // 编辑订单
+    function edit(oid, cid, orderTime, status, ototol, oaddress) {
+        $("#oid").val(oid);
+        $("#cid").val(cid);
+        $("#orderTime").val(orderTime.replace(" ", "T")); // 转换日期格式
+        $("#status").val(status);
+        $("#ototol").val(ototol);
+        $("#address").val(oaddress);
+
+        $("#btnZpc").html("修改");
+        $("#action").val("update");
+        $("#oldoid").val(oid);
+        $("#njzpc").html("正在修改订单: " + oid);
+
+        // 滚动到表单位置
+        $('html, body').animate({
+            scrollTop: $("#ordersForm").offset().top
+        }, 500);
+    }
+
+    // 验证输入并提交
+    function verifyInput() {
+        var oid = $("#oid").val();
+        var cid = $("#cid").val();
+        var orderTime = $("#orderTime").val();
+        var status = $("#status").val();
+        var ototol = $("#ototol").val();
+        var address = $("#address").val();
+        var action = $("#action").val();
+        var oldoid = $("#oldoid").val();
+
+        // 验证订单编号
+        if (!/^\d+$/.test(oid) || oid < 1 || oid > 99999) {
+            $("#njzpc").html("无效的订单编号，请输入1-99999的数字");
+            return;
+        }
+
+        // 验证客户号
+        if (!/^\d+$/.test(cid)) {
+            $("#njzpc").html("无效的客户号，请输入数字");
+            return;
+        }
+
+        // 验证下单时间
+        if (!orderTime) {
+            $("#njzpc").html("请选择下单时间");
+            return;
+        }
+
+        // 在verifyInput()函数中检查status值
+var status = $("#status").val();
+if (!status) {
+    $("#njzpc").html("请选择订单状态");
+    return;
+}
+
+        // 验证订单总金额
+        if (!ototol || isNaN(ototol) || parseFloat(ototol) <= 0) {
+            $("#njzpc").html("请输入有效的订单总金额");
+            return;
+        }
+
+        // 验证配送地址
+        if (!address || address.trim() === "") {
+            $("#njzpc").html("配送地址不能为空");
+            return;
+        }
+
+        $("#njzpc").html("数据验证通过，正在提交...");
+
+        var formData = new FormData($("#ordersForm")[0]);
+        var url = "api/orders";
+        if (action === "update") {
+            url += "?oldoid=" + oldoid;
+        }
+
+        $.ajax({
+            type: action === "insert" ? "POST" : "PUT",
+            url: url,
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response === "success") {
+                    $("#njzpc").html(action === "insert" ? "订单增加成功" : "订单修改成功");
+                    if (action === "update") {
+                        $("#btnZpc").html("增加");
+                        $("#action").val("insert");
+                        $("#oldoid").val("-1");
+                    }
+                    displayorders();
+                    $("#ordersForm")[0].reset();
+                } else if (response === "exist") {
+                    $("#njzpc").html("订单编号已存在");
+                } else {
+                    $("#njzpc").html(action === "insert" ? "订单增加失败" : "订单修改失败");
+                }
+            },
+            error: function(xhr) {
+                $("#njzpc").html("请求出错，请稍后重试");
+                console.error(xhr);
+            }
+        });
+    }
+
+    // 页面加载时显示订单列表
+    $(document).ready(function() {
+        displayorders();
+    });
+</script>

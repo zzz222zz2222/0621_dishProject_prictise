@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>菜单管理</title>
+    <link rel="stylesheet" href="js/bootstrap/dist/css/bootstrap.min.css">
+    <script src="js/jquery/dist/jquery.min.js"></script>
+    <script src="js/bootstrap/dist/js/bootstrap.min.js"></script>
+    <style>
+        .table th, .table td {
+            text-align: center;
+            vertical-align: middle;
+        }
+        .alert {
+            margin-bottom: 20px;
+        }
+        .ml-2 {
+            margin-left: 0.5rem;
+        }
+        .dish-img {
+            max-width: 80px;
+            max-height: 80px;
+            border-radius: 4px;
+        }
+        /* 状态标签样式 */
+        .status-tag {
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: white;
+            font-size: 0.8em;
+        }
+        .status-pending {
+            background-color: #ffc107; /* 黄色-待审核 */
+        }
+        .status-passed {
+            background-color: #28a745; /* 绿色-通过 */
+        }
+        .status-disabled {
+            background-color: #dc3545; /* 红色-禁用 */
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <table class="table table-bordered table-hover">
+                <thead class="thead-light">
+                <tr>
+                    <th>菜单名称</th>
+                    <th>餐馆名称</th>
+                    <th>电话</th>
+                    <th>状态</th> <!-- 状态栏 -->
+                    <th>操作</th> <!-- 操作栏 -->
+                </tr>
+                </thead>
+                <tbody id="displaySeller">
+                <!-- 数据将动态加载 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 显示用户列表（根据状态显示对应文本）
+    function displaySeller() {
+        $.ajax({
+            url: "/0721_war_exploded/user",
+            data: { userType: "seller" }, // 传递用户类型参数
+            success: function(r) {
+                var s = "";
+                r.forEach(function(restaurant) {
+                    // 根据状态确定状态栏文本和样式
+                    let statusText = "";
+                    let statusClass = "";
+                    // 根据状态确定操作按钮文字
+                    let actionText = "";
+
+                    switch(restaurant.status) {
+                        case "0":
+                            statusText = "待审核";
+                            statusClass = "status-pending";
+                            actionText = "审核"; // 0→1（待审核→通过）
+                            break;
+                        case "1":
+                            statusText = "通过";
+                            statusClass = "status-passed";
+                            actionText = "禁用"; // 1→2（通过→禁用）
+                            break;
+                        case "2":
+                            statusText = "禁用";
+                            statusClass = "status-disabled";
+                            actionText = "通过"; // 2→1（禁用→通过）
+                            break;
+                        default:
+                            statusText = "未知状态";
+                            statusClass = "";
+                            actionText = "操作";
+                    }
+
+                    // 生成表格行
+                    s += `
+                    <tr>
+                        <td>${restaurant.rname}</td> <!-- 用户名称 -->
+                        <td>${restaurant.raddress}</td> <!-- 地址 -->
+                        <td>${restaurant.rphone}</td> <!-- 电话（唯一标识） -->
+                        <td><span class="status-tag ${statusClass}">${statusText}</span></td> <!-- 状态栏（带样式） -->
+                        <td>
+                            <!-- 操作按钮：传递电话和当前状态 -->
+                            <button type='button' class='btn btn-primary'
+                                    onclick='transSeller("${restaurant.rphone}", ${restaurant.status})'>
+                                ${actionText}
+                            </button>
+                        </td>
+                    </tr>
+                    `;
+                });
+
+                $("#displaySeller").html(s); // 渲染到表格
+            },
+            error: function() {
+                alert("加载用户列表失败");
+            }
+        });
+    }
+
+    // 初始化加载列表
+    displaySeller();
+
+    // 状态切换函数（核心逻辑）
+    function transSeller(rphone, currentStatus) {
+
+        let userType = "seller";
+        // 计算新状态（0→1，1→2，2→1）
+        let newStatus = 0;
+        if (currentStatus === 0) {
+            newStatus = 1; // 待审核→通过
+        } else if (currentStatus === 1) {
+            newStatus = 2; // 通过→禁用
+        } else if (currentStatus === 2) {
+            newStatus = 1; // 禁用→通过
+        } else {
+            alert("状态异常，无法切换");
+            return;
+        }
+
+        // 发送AJAX请求更新数据库（类型为trans，传递cphone、当前status和newStatus）
+        $.ajax({
+            type: "post", // 请求类型改为trans
+            url: "/0721_war_exploded/user",
+            data: {
+                action: "updateStatus",
+                rphone: rphone,       // 用户电话（唯一标识）
+                newStatus: newStatus, // 计算后的新状态
+                userType: userType,
+            },
+            success: function(r) {
+                if (r.includes("success")) {
+                    // 状态更新成功后刷新列表
+                    displaySeller();
+                } else {
+                    alert("状态更新失败：" + r);
+                }
+            },
+            error: function(xhr) {
+                alert("请求失败，状态码：" + xhr.status);
+            }
+        });
+    }
+</script>
+</body>
+</html>

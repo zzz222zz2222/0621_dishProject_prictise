@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>用户系统</title>
+	<link rel="stylesheet" href="js/bootstrap/dist/css/bootstrap.min.css">
+	<script src="js/jquery/dist/jquery.min.js"></script>
+	<script src="js/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="js/my.js"></script>
+    <link rel="stylesheet" href="https://cdn.staticfile.net/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+
+	<style>
+		.table th, .table td {
+            text-align: center;
+            vertical-align: middle;
+        }
+        .alert {
+            margin-bottom: 20px;
+        }
+        .ml-2 {
+            margin-left: 0.5rem;
+        }
+        .dish-img {
+            max-width: 80px;
+            max-height: 80px;
+            border-radius: 4px;
+        }
+	</style>
+<body>
+
+<div class="container">
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <ul class="nav nav-pills" id="nav-pills">
+                <li class="active"><a href="javascript:void(0)" onclick="loadContent('customerPage.html',this)">首页</a></li>
+<!--                <li><a href="javascript:void(0)" onclick="loadContent('customer_manage.html',this)">用户管理</a></li>-->
+<!--                <li><a href="javascript:void(0)" onclick="loadContent('seller_manage.html',this)">商家管理</a></li>-->
+<!--                <li><a href="javascript:void(0)"onclick="loadContent('orders.html',this)">订单管理</a></li>-->
+<!--                <li><a href="javascript:void(0)">其他管理1</a></li>-->
+<!--                <li><a href="javascript:void(0)">其他管理2</a></li>-->
+                <div>
+                    <input id="find" name="find" class="form-control" placeholder="搜索菜名">
+                    <button type="button" class="form-control" onclick="searchDish()">搜索</button>
+                </div>
+                <li class="dropdown pull-right">
+                    <a href="#" data-toggle="dropdown" class="dropdown-toggle">下拉<strong class="caret"></strong></a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a href="#">操作</a>
+                        </li>
+                        <li>
+                            <a href="#">设置栏目</a>
+                        </li>
+                        <li>
+                            <a href="#">更多设置</a>
+                        </li>
+                        <li class="divider">
+                        </li>
+                        <li>
+                            <a href="#">分割线</a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+        </div>
+    </div>
+    <!-- 功能 -->
+    <div class="row clearfix">
+        <div class="col-md-12 column"  id="contentDiv">
+
+        </div>
+    </div>
+</div>
+
+<div class="container">
+	<div class="row clearfix">
+		<div class="col-md-12 column">
+			<table class="table table-bordered table-hover">
+				<thead class="thead-light">
+				<tr>
+					<th>菜名</th>
+					<th>价格</th>
+					<th>商家名</th>
+					<th>类型</th>
+					<th>图片</th>
+				</tr>
+				</thead>
+				<tbody id="disDis">
+				<!-- 菜品数据将在这里动态加载 -->
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
+
+			<div style="margin-top: 20px;"> <!-- 增加间距，避免被表格遮挡 -->
+				<div class="row">
+					<div class="col-md-12 text-center"> <!-- text-center 让按钮居中 -->
+						<button type='button' class='btn btn-default' onclick="viewMore()">查看更多</button>
+					</div>
+				</div>
+			</div>
+
+<script>
+
+    //todo
+    var userType = sessionStorage.getItem("userType")
+    if (userType!="customer"){
+        //跳转。login
+        window.location.href="login.html";
+    }
+    //todo
+
+    function searchDish(){
+        $.ajax({
+            type:"post",
+            url:"api/dish",
+            data:{
+                find:$("#find").val(),
+                userType:"customer",
+                pageNo:pageNo,
+            },
+            success: function(r) {
+                console.log("后端返回的菜品数据：", r);
+                var s= "";
+                r.forEach(function(dish){
+                    s += `
+           <tr did='tr${dish.name}'>
+                        <td>${dish.name}</td>
+                        <td>¥${dish.dprice}</td>
+                        <td>${dish.rname}</td>
+                        <td>${dish.typeName}</td>
+                        <td><img src='upload/dish${dish.id}_.png'width='50' height='50'></td>
+        </tr>
+
+    `;             });
+                $("#disDis").html(s);
+            }
+        });
+    }
+
+    var pageNo = 1;// todo
+
+ // 显示菜品列表
+	function displayDish() {
+		$.ajax({
+			url: "api/dish",
+			data: { userType: "customer" ,pageNo:pageNo},
+			success: function(r) {
+                console.log("后端返回的菜品数据：", r);
+				var s= "";
+				r.forEach(function(dish){
+					s += `
+           <tr did='tr${dish.name}'>
+                        <td>${dish.name}</td>
+                        <td>¥${dish.price}</td>
+                        <td>${dish.restaurantName}</td>
+                        <td>${dish.typeName}</td>
+                        <td><img src='upload/dish${dish.id}_.png'width='50' height='50'></td>
+        </tr>
+
+    `;             });
+                  // $("#disDis").html(s);
+				  $("#disDis").append(s);
+			}
+		});
+	}
+    displayDish();
+
+    function viewMore(){
+        pageNo++;
+        displayDish();
+    }
+
+// // 删除菜品
+//
+// function deleteDish(did) {
+//     if (confirm("确定删除吗？")) {
+//         $.ajax({
+//             type: "delete",
+//             url: "api/dish?did="+did,
+//             data: {did: did},
+//             success: function(r) {
+//                 console.log(r);
+//                 if (r.indexOf("success") > -1) {
+//                     // 删除成功后刷新整个菜品列表
+//                     displayDish(); // 添加这行来刷新列表
+//                     $("#njzpc").html("删除成功");
+//                 } else {
+//                     $("#njzpc").html("删除失败");
+//                 }
+//             },
+//             error: function() {
+//                 $("#njzpc").html("删除请求失败");
+//             }
+//         });
+//     }
+// }
+
+
+
+// function verifyInput() {
+//     // 获取表单值
+//     var did = $("#did").val();
+//     var dname = $("#dname").val();
+//     var dprice = $("#dprice").val();
+//     var rname = $("#rname").val();
+//     var typeid = $("#typeid").val();
+//
+//     // 验证菜品ID
+//     if (!isNumStr(did) || did < 1 || did > 99999) {
+//         $("#njzpc").html("无效的菜品ID，范围：1-99999");
+//         return ;
+//     }
+//
+//     // 验证菜品名称
+//     if (dname.trim() === "") {
+//         $("#njzpc").html("菜品名称不能为空");
+//         return ;
+//     }
+//
+//     // 验证菜品价格
+//     if (!isNumStr(dprice) || parseFloat(dprice) <= 0 || parseFloat(dprice) > 9999) {
+//         $("#njzpc").html("无效的价格，范围：0.01-9999");
+//         return ;
+//     }
+//
+//     // 验证商家名称
+//     if (rname.trim() === "") {
+//         $("#njzpc").html("商家名称不能为空");
+//         return ;
+//     }
+//     // 验证菜品类型
+//      if (typeid.trim() === "") {
+//         $("#njzpc").html("请选择菜品类型");
+//         return;
+//     }
+//     $("#njzpc").html("数据验证通过");
+//
+//
+//
+//
+//  var action = $("#action").val();
+//     $.ajax({
+//          //后端doPost是增加，doPut是修改
+//         type: action == "insert" ? "post" : "put",
+//         url: "api/dish",
+//         data: new FormData($('#dishForm')[0]),
+//         processData: false,  // 必须设置为false
+//         contentType: false,  // 必须设置为false
+//         success: function(r) {
+//             console.log(r);
+//              if (r.indexOf("success") > -1) {
+//                     $("#njzpc").html(action == "insert" ? "增加成功" : "修改成功");
+//                     if (action == "update") {
+//                         $("#btnZpc").html("增加");
+//                         $("#action").val("insert");
+//                     }
+//                     displayDish();
+//                 } else if (r.indexOf("exist") > -1) {
+//                     $("#njzpc").html("菜品已经存在");
+//                 } else {
+//                     $("#njzpc").html(action == "insert" ? "增加失败" : "修改失败");
+//                 }
+//             }
+//         });
+//
+//     }
+
+// 编辑菜品
+function editDish(did, dname, dprice,rname) {
+	console.log(did, dname, dprice, rname);
+    document.getElementById("did").value = did;
+    document.getElementById("dname").value = dname;
+    document.getElementById("dprice").value = dprice;
+    document.getElementById("rname").value = rname;
+
+    // 区分新增或更新
+    document.getElementById("btnZpc").innerHTML = "修改";
+    document.getElementById("action").value = "update";
+    document.getElementById("olddid").value = did;
+
+}
+
+</script>
+</body>
+</html>

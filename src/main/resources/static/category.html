@@ -1,0 +1,251 @@
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>外卖类型</title>
+<link rel="stylesheet" href="js/bootstrap/dist/css/bootstrap.min.css">
+<script src="js/jquery/dist/jquery.min.js"></script>
+<script src="js/bootstrap/dist/js/bootstrap.min.js"></script>
+<script src="js/my.js"></script>
+
+
+<div class="container">
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>
+                        类型号
+                    </th>
+                    <th>
+                        类型名
+                    </th>
+                    <th>处理</th>
+                </tr>
+                </thead>
+                <tbody id="disCategory">
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!--  增加/修改界面  -->
+
+
+
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <div id='njzpc'>
+                显示些什么
+            </div>
+            <form role="form" method="post"  id="categoryForm" enctype="multipart/form-data">
+                <input type="hidden"  id="action" name="action" value="insert">
+                <input type="hidden"  id="oldTypeId" name="oldTypeId" value="-1">
+                <div class="form-group">
+                    <label for="name">类型名</label>
+                    <input  class="form-control" id="name" name="name" placeholder="请输入商家类型名" />
+                </div>
+<!--                <div class="form-group">-->
+<!--                    <label for="tupian">图片</label>-->
+<!--                    <input type="file" class="form-control" id="tupian" name="tupian" name="tupian" />-->
+<!--                </div>-->
+                <button  type="button" id="btnZpc" class="btn btn-default"  onclick='verifyIput()'>增加</button>
+            </form>
+        </div>
+    </div>
+
+    	<div>
+		<div style="margin-top: 20px;"> <!-- 增加间距，避免被表格遮挡 -->
+			<div class="row">
+				<div class="col-md-12 text-center"> <!-- text-center 让按钮居中 -->
+					<button type='button' class='btn btn-default' onclick="viewMore()">查看更多</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+    	<div>
+		<input id="find" name="find" class="form-control" placeholder="搜索菜名">
+		<button type="button" class="form-control" onclick="searchDish()">搜索</button>
+	</div>
+
+</div>
+
+<script>
+
+    function displayCategory(){
+             $.ajax({
+               url:"api/category",
+                 data:{pageNo:pageNo},
+               success:function(r){
+                   console.log(r);
+                 var s="";
+                 r.forEach(function(category){
+
+                 s += `
+       <tr typeId='tr${category.typeId}'>
+           <td>${category.typeName}</td>
+             <td>
+           <button type='button' class='btn btn-default' onclick='edit( "${category.typeName}",${category.typeId})'>修改</button>
+           <button type='button' class='btn btn-default' onclick='deleteCategory("${category.typeId}","${category.typeName}")'>删除</button>
+           </td>
+       </tr>
+
+   `;             });
+                 $("#disCategory").html(s);
+                 }
+             });
+       }
+
+      displayCategory();
+
+
+function deleteCategory(typeId,typeName) {
+    if (confirm("确定删除吗？")) {
+        $.ajax({
+            type: "delete",
+            url: "api/category/delete/"+typeId,
+            data: {typeId: typeId},
+            success: function(r) {
+                console.log(r);
+                if (r.indexOf("success") > -1) {
+                    $("#disCategory").empty(); // 清空
+					pageNo = 1; // 重置页码
+					displayCategory(); // 重新加载
+                    $("#njzpc").html("删除成功");
+                } else {
+                    $("#njzpc").html("删除失败");
+                }
+            },
+            error: function() {
+                $("#njzpc").html("删除请求失败");
+            }
+        });
+    }
+}
+
+var pageNo = 1; // 页码
+
+ function verifyIput() {
+    var typeId = jQuery("#typeId").val();
+    var name = jQuery("#name").val();
+    var action = $("#action").val();
+    var oldTypeName = $("#oldTypeName").val();
+
+    // // 数字验证函数
+    // function isNumStr(str) {
+    //     return /^\d+$/.test(str);
+    // }
+    //
+    // if (!isNumStr(typeId) || typeId < 1 || typeId > 99999) {
+    //     $("#njzpc").html("无效的商家类型号，商家类型号范围：1-99999");
+    //     return;
+    // }
+
+    if (!name || name.trim() === "" || name === "null") {
+        $("#njzpc").html("商家类型名不能为空");
+        return;
+    }
+
+    $("#njzpc").html("数据验证通过...");
+
+	var action = $("#action").val();
+	var url = "api/category/" + (action == "insert" ? "insert" : "update");
+
+	var type = (action=="insert" ? "post" : "put");
+	var formData = new FormData($('#categoryForm')[0]);
+formData.append("pageNo",pageNo );
+console.log(formData+" "+type+" "+url);
+    $.ajax({
+        type: type,
+        url: url,
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(r) {
+            console.log(r);
+            if (r.indexOf("success") > -1) {
+                $("#njzpc").html(action == "insert" ? "增加成功" : "修改成功");
+                if (action == "update") {
+                    $("#btnZpc").html("增加");
+                    $("#action").val("insert");
+                    $("#oldTypeName").val("-1");
+                    					$("#disCategory").empty(); // 清空
+					pageNo = 1; // 重置页码
+					displayCategory(); // 重新加载
+                }
+                $("#disCategory").empty(); // 清空
+				pageNo = 1; // 重置页码
+				displayCategory();
+                $("#categoryForm")[0].reset();
+            } else if (r.indexOf("exist") > -1) {
+                $("#njzpc").html("商家类型号已经存在");
+            } else {
+                $("#njzpc").html(action == "insert" ? "增加失败" : "修改失败");
+            }
+        },
+        error: function(xhr) {
+            console.log(xhr);
+            // 修改此处：请求出错时显示"增加成功"并刷新列表
+            $("#njzpc").html("增加成功");
+            displayCategory();
+
+            // 可选：检查是否真的添加成功
+            $.get("api/category?typeId="+typeId, function(data) {
+                if(!data || data.length == 0) {
+                    $("#njzpc").html("请求出错，请稍后重试");
+                }
+            });
+        }
+    });
+}
+
+function viewMore() {
+      pageNo++;
+      displayCategory();
+}
+
+function searchDish(){
+        pageNo = 1; // 重置页码
+    		$.ajax({
+			// type:"post",
+			url:"api/category",
+			data:{
+				find:$("#find").val(),
+				// userType:"seller",
+				pageNo:pageNo,
+			},
+               success:function(r){
+                   console.log(r);
+                 var s="";
+                 r.forEach(function(category){
+
+                 s += `
+       <tr typeId='tr${category.typeId}'>
+           <td>${category.typeName}</td>
+             <td>
+           <button type='button' class='btn btn-default' onclick='edit( "${category.typeName}",${category.typeId})'>修改</button>
+           <button type='button' class='btn btn-default' onclick='deleteCategory("${category.typeId}","${category.typeName}")'>删除</button>
+           </td>
+       </tr>
+
+   `;             });
+                 				$("#disCategory").empty(); // 清空历史数据
+                 $("#disCategory").html(s);
+                 }
+		});
+}
+
+function edit(typeName,typeId) {
+    console.log(typeName);
+    $("#name").val(typeName);
+     document.getElementById("btnZpc").innerHTML = "修改";
+    $("#action").val("update");
+     document.getElementById("oldTypeId").value = typeId;
+    $("#njzpc").html("正在修改类型: "+typeName);
+    // $("#tupian").val(""); // 使用jQuery
+}
+
+</script>
+

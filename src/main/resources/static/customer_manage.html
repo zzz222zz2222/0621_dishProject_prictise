@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理系统</title>
+    <link rel="stylesheet" href="js/bootstrap/dist/css/bootstrap.min.css">
+    <script src="js/jquery/dist/jquery.min.js"></script>
+    <script src="js/bootstrap/dist/js/bootstrap.min.js"></script>
+    <style>
+        .table th, .table td {
+            text-align: center;
+            vertical-align: middle;
+        }
+        .alert {
+            margin-bottom: 20px;
+        }
+        .ml-2 {
+            margin-left: 0.5rem;
+        }
+        .dish-img {
+            max-width: 80px;
+            max-height: 80px;
+            border-radius: 4px;
+        }
+        /* 状态标签样式 */
+        .status-tag {
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: white;
+            font-size: 0.8em;
+        }
+        .status-pending {
+            background-color: #ffc107; /* 黄色-待审核 */
+        }
+        .status-passed {
+            background-color: #28a745; /* 绿色-通过 */
+        }
+        .status-disabled {
+            background-color: #dc3545; /* 红色-禁用 */
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <table class="table table-bordered table-hover">
+                <thead class="thead-light">
+                <tr>
+                    <th>用户名称</th>
+                    <th>用户地址</th>
+                    <th>电话</th>
+                    <th>状态</th> <!-- 状态栏 -->
+                    <th>操作</th> <!-- 操作栏 -->
+                </tr>
+                </thead>
+                <tbody id="displayCustomer">
+                <!-- 数据将动态加载 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 显示用户列表（根据状态显示对应文本）
+    function displayCustomer() {
+        $.ajax({
+            url: "/0721_war_exploded/user",
+            data: { userType: "customer" }, // 传递用户类型参数
+            success: function(r) {
+                var s = "";
+                r.forEach(function(customer) {
+                    // 根据状态确定状态栏文本和样式
+                    let statusText = "";
+                    let statusClass = "";
+                    // 根据状态确定操作按钮文字
+                    let actionText = "";
+
+                    switch(customer.status) {
+                        case "0":
+                            statusText = "待审核";
+                            statusClass = "status-pending";
+                            actionText = "审核"; // 0→1（待审核→通过）
+                            break;
+                        case "1":
+                            statusText = "通过";
+                            statusClass = "status-passed";
+                            actionText = "禁用"; // 1→2（通过→禁用）
+                            break;
+                        case "2":
+                            statusText = "禁用";
+                            statusClass = "status-disabled";
+                            actionText = "通过"; // 2→1（禁用→通过）
+                            break;
+                        default:
+                            statusText = "未知状态";
+                            statusClass = "";
+                            actionText = "操作";
+                    }
+
+                    // 生成表格行
+                    s += `
+                    <tr>
+                        <td>${customer.cname}</td> <!-- 用户名称 -->
+                        <td>${customer.caddress}</td> <!-- 地址 -->
+                        <td>${customer.cphone}</td> <!-- 电话（唯一标识） -->
+                        <td><span class="status-tag ${statusClass}">${statusText}</span></td> <!-- 状态栏（带样式） -->
+                        <td>
+                            <!-- 操作按钮：传递电话和当前状态 -->
+                            <button type='button' class='btn btn-primary'
+                                    onclick='transeCustomer("${customer.cphone}", ${customer.status})'>
+                                ${actionText}
+                            </button>
+                        </td>
+                    </tr>
+                    `;
+                });
+
+                $("#displayCustomer").html(s); // 渲染到表格
+            },
+            error: function() {
+                alert("加载用户列表失败");
+            }
+        });
+    }
+
+    // 初始化加载列表
+    displayCustomer();
+
+    // 状态切换函数（核心逻辑）
+    function transeCustomer(cphone, currentStatus) {
+
+        let userType = "customer";
+        // 计算新状态（0→1，1→2，2→1）
+        let newStatus = 0;
+        if (currentStatus === 0) {
+            newStatus = 1; // 待审核→通过
+        } else if (currentStatus === 1) {
+            newStatus = 2; // 通过→禁用
+        } else if (currentStatus === 2) {
+            newStatus = 1; // 禁用→通过
+        } else {
+            alert("状态异常，无法切换");
+            return;
+        }
+
+        // 发送AJAX请求更新数据库（类型为trans，传递cphone、当前status和newStatus）
+        $.ajax({
+            type: "post", // 请求类型改为trans
+            url: "/0721_war_exploded/user",
+            data: {
+                action: "updateStatus",
+                cphone: cphone,       // 用户电话（唯一标识）
+                newStatus: newStatus, // 计算后的新状态
+                userType: userType,
+            },
+            success: function(r) {
+                if (r.includes("success")) {
+                    // 状态更新成功后刷新列表
+                    displayCustomer();
+                } else {
+                    alert("状态更新失败：" + r);
+                }
+            },
+            error: function(xhr) {
+                alert("请求失败，状态码：" + xhr.status);
+            }
+        });
+    }
+</script>
+</body>
+</html>
+
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="zh-CN">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>用户管理系统</title>-->
+<!--    <link rel="stylesheet" href="js/bootstrap/dist/css/bootstrap.min.css">-->
+<!--    <script src="js/jquery/dist/jquery.min.js"></script>-->
+<!--    <script src="js/bootstrap/dist/js/bootstrap.min.js"></script>-->
+<!--    <style>-->
+<!--        .table th, .table td {-->
+<!--            text-align: center;-->
+<!--            vertical-align: middle;-->
+<!--        }-->
+<!--        .alert {-->
+<!--            margin-bottom: 20px;-->
+<!--        }-->
+<!--        .ml-2 {-->
+<!--            margin-left: 0.5rem;-->
+<!--        }-->
+<!--        .dish-img {-->
+<!--            max-width: 80px;-->
+<!--            max-height: 80px;-->
+<!--            border-radius: 4px;-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+
+<!--<body>-->
+<!--<div class="container">-->
+<!--    <div class="row clearfix">-->
+<!--        <div class="col-md-12 column">-->
+<!--            <table class="table table-bordered table-hover">-->
+<!--                <thead class="thead-light">-->
+<!--                <tr>-->
+<!--                    <th>用户名称</th>-->
+<!--                    <th>用户地址</th>-->
+<!--                    <th>电话</th>-->
+<!--                    <th>商家名</th>-->
+<!--                    <th>状态</th> &lt;!&ndash; 状态列 &ndash;&gt;-->
+<!--                    <th>操作</th>-->
+<!--                </tr>-->
+<!--                </thead>-->
+<!--                <tbody id="displayCustomer">-->
+<!--                &lt;!&ndash; 数据将动态加载 &ndash;&gt;-->
+<!--                </tbody>-->
+<!--            </table>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--<script>-->
+<!--    // 显示用户列表（包含状态和动态按钮）-->
+<!--    function displayCustomer() {-->
+<!--        $.ajax({-->
+<!--            url: "/0721_war_exploded/user", // 正确的上下文路径-->
+<!--            success: function(r) {-->
+<!--                var s = "";-->
+<!--                r.forEach(function(customer) {-->
+<!--                    // 根据状态确定按钮文字（0→审核，1→使用，2→禁用）-->
+<!--                    let btnText = "";-->
+<!--                    switch(customer.status) {-->
+<!--                        case 0: btnText = "审核"; break;-->
+<!--                        case 1: btnText = "使用"; break;-->
+<!--                        case 2: btnText = "禁用"; break;-->
+<!--                        default: btnText = "未知"; // 处理异常状态-->
+<!--                    }-->
+
+<!--                    // 生成表格行（包含状态列和操作按钮）-->
+<!--                    s += `-->
+<!--                    <tr>-->
+<!--                        <td>${customer.rname}</td> &lt;!&ndash; 用户名称 &ndash;&gt;-->
+<!--                        <td>${customer.raddress}</td> &lt;!&ndash; 地址 &ndash;&gt;-->
+<!--                        <td>${customer.rphone}</td> &lt;!&ndash; 电话（唯一标识） &ndash;&gt;-->
+<!--                        <td>${customer.status}</td> &lt;!&ndash; 显示当前状态值 &ndash;&gt;-->
+<!--                        <td>-->
+<!--                            &lt;!&ndash; 状态切换按钮：传递电话和当前状态 &ndash;&gt;-->
+<!--                            <button type='button' class='btn btn-primary'-->
+<!--                                    onclick='transeCustomer("${customer.rphone}", ${customer.status})'>-->
+<!--                                ${btnText}-->
+<!--                            </button>-->
+<!--                        </td>-->
+<!--                    </tr>-->
+<!--                    `;-->
+<!--                });-->
+<!--                $("#displayCustomer").html(s); // 渲染到表格-->
+<!--            },-->
+<!--            error: function() {-->
+<!--                alert("加载用户列表失败");-->
+<!--            }-->
+<!--        });-->
+<!--    }-->
+
+<!--    // 初始化加载列表-->
+<!--    displayCustomer();-->
+
+<!--    // 状态切换函数（核心逻辑）-->
+<!--    function transeCustomer(cphone, currentStatus) {-->
+<!--        // 计算新状态（0→1，1→2，2→1）-->
+<!--        let newStatus = 0;-->
+<!--        if (currentStatus === 0) {-->
+<!--            newStatus = 1;-->
+<!--        } else if (currentStatus === 1) {-->
+<!--            newStatus = 2;-->
+<!--        } else if (currentStatus === 2) {-->
+<!--            newStatus = 1;-->
+<!--        } else {-->
+<!--            alert("状态异常，无法切换");-->
+<!--            return;-->
+<!--        }-->
+
+<!--        // 发送AJAX请求更新数据库-->
+<!--        $.ajax({-->
+<!--            type: "POST", // 用POST请求更新状态-->
+<!--            url: "/0721_war_exploded/user", // 后端接口地址-->
+<!--            data: {-->
+<!--                action: "updateStatus", // 告诉后端是更新状态操作-->
+<!--                cphone: cphone, // 用户唯一标识（电话）-->
+<!--                newStatus: newStatus // 新状态值-->
+<!--            },-->
+<!--            success: function(r) {-->
+<!--                if (r.includes("success")) {-->
+<!--                    alert("状态更新成功");-->
+<!--                    displayCustomer(); // 刷新列表，更新按钮文字和状态-->
+<!--                } else {-->
+<!--                    alert("状态更新失败：" + r);-->
+<!--                }-->
+<!--            },-->
+<!--            error: function() {-->
+<!--                alert("请求失败，请检查网络");-->
+<!--            }-->
+<!--        });-->
+<!--    }-->
+
+<!--</script>-->
+<!--</body>-->
+<!--</html>-->

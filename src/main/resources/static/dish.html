@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>菜品管理系统</title>
+	<link rel="stylesheet" href="js/bootstrap/dist/css/bootstrap.min.css">
+	<script src="js/jquery/dist/jquery.min.js"></script>
+	<script src="js/bootstrap/dist/js/bootstrap.min.js"></script>
+	<style>
+		.table th, .table td {
+            text-align: center;
+            vertical-align: middle;
+        }
+        .alert {
+            margin-bottom: 20px;
+        }
+        .ml-2 {
+            margin-left: 0.5rem;
+        }
+        .dish-img {
+            max-width: 80px;
+            max-height: 80px;
+            border-radius: 4px;
+        }
+	</style>
+
+
+<div class="container">
+	<div class="row clearfix">
+		<div class="col-md-12 column">
+			<table class="table table-bordered table-hover">
+				<thead class="thead-light">
+				<tr>
+					<th>菜品号</th>
+					<th>菜名</th>
+					<th>价格</th>
+					<th>商家名</th>
+					<th>类型</th>
+					<th>图片</th>
+					<th>操作</th>
+				</tr>
+				</thead>
+				<tbody id="disDis">
+				<!-- 菜品数据将在这里动态加载 -->
+				</tbody>
+				<div>
+				<button type='button' class='btn bt-default' onclick="viewMore()">查看更多</button>
+				</div>
+			</table>
+		</div>
+	</div>
+
+	<div class="row clearfix">
+		<div class="col-md-12 column">
+			<div id="alert-container">
+				<div id="njzpc" class="alert alert-info">菜品管理系统</div>
+			</div>
+			<form role="form" method="post" id="dishForm" enctype="multipart/form-data">
+				<input type="hidden" id="action" name="action" value="insert">
+				<input type="hidden" id="olddid" name="olddid" value="-1">
+
+				<div class="form-group">
+					<label for="did">菜品号</label>
+					<input type="number" class="form-control" id="did" name="did"
+						   placeholder="请输入菜品号" min="1" max="99999" required>
+				</div>
+
+				<div class="form-group">
+					<label for="rname">商家名</label>
+					<select class="form-control" id="rname" name="rname" required>
+						<option value="">-- 选择商家 --</option>
+						<!-- 商家选项将在这里动态加载 -->
+					</select>
+				</div>
+
+				<div class="form-group">
+					<label for="dname">菜名</label>
+					<input class="form-control" id="dname" name="dname"
+						   placeholder="请输入菜名" required>
+				</div>
+
+				<div class="form-group">
+					<label for="dprice">价格</label>
+					<input type="number" step="0.01" class="form-control" id="dprice"
+						   name="dprice" placeholder="请输入价格" min="0" required>
+				</div>
+
+				<div class="form-group">
+					<label for="typeid">类型</label>
+					<select class="form-control" id="typeid" name="typeid" required>
+<!--						<option value="">&#45;&#45; 选择类型 &#45;&#45;</option>-->
+						<!-- 类型选项将在这里动态加载 -->
+					</select>
+				</div>
+
+				<div class="form-group">
+					<label for="tupian">菜品图片</label>
+					<input type="file" class="form-control" id="tupian" name="tupian"/>
+				</div>
+
+				<button id="btnZpc" class="btn btn-primary" type="button" onclick="verifyInput()">增加</button>
+
+			</form>
+		</div>
+	</div>
+</div>
+
+<script>
+
+	// 加载商家下拉列表
+    function loadRestaurants() {
+
+        $.ajax({
+            url: "api/restaurant",
+            success: function (r) {
+                console.log(r);
+                var s = ""
+                for (var i = 0; i < r.length; i++) {
+                    s = s + "<option  value='" + r[i].rid + "'>" + r[i].rname + "'</option>"
+                }
+                $("#rname").html(s)
+            }
+        });
+    }
+
+ loadRestaurants();
+
+
+ // 加载菜品类型下拉列表
+function loadCategories() {
+    $.ajax({
+        url: "api/category",
+        success: function(r) {
+            console.log(r); // 调试用，打印返回数据
+            var options = '<option value="">-- 选择类型 --</option>';
+            for(var i = 0; i < r.length; i++) {
+                options += "<option value='" + r[i].typeid + "'>" + r[i].name + "</option>";
+            }
+            $("#typeid").html(options);
+        },
+        error: function() {
+            console.error("加载类型数据失败");
+            $("#typeid").html('<option value="">加载类型失败</option>');
+        }
+    });
+}
+
+// 页面加载时调用
+loadCategories();
+
+var pageNo = 1;// todo
+
+ // 显示菜品列表
+function displayDish() {
+    $.ajax({
+        url: "api/dish",
+      success: function(r) {
+           var s= "";
+       r.forEach(function(dish){
+                    s += `
+           <tr did='tr${dish.did}'>
+                        <td>${dish.did}</td>
+                        <td>${dish.dname}</td>
+                        <td>¥${dish.dprice}</td>
+                        <td>${dish.rname}</td>
+                        <td>${dish.name}</td>
+                        <td><img src="upload/dish${dish.did}_.png'width='50" height='50'></td>
+                        <td>
+                        <button type='button' class='btn bt-default' onclick='editDish(${dish.did}, "${dish.dname}",
+                         ${dish.dprice}, "${dish.rname}")'>修改</button>
+                        <button type='button' class='btn btn-default' onclick='deleteDish(${dish.did})'>删除</button></td>
+        </tr>
+
+    `;             });
+                  // $("#disDis").html(s);
+				  $("#disDis").append(s);
+                  }
+              });
+        }
+    displayDish();
+
+	function viewMore(){
+		pageNo++;
+		displayDish();
+	}
+
+// 删除菜品
+
+function deleteDish(did) {
+    if (confirm("确定删除吗？")) {
+        $.ajax({
+            type: "delete",
+            url: "api/dish?did="+did,
+            data: {did: did},
+            success: function(r) {
+                console.log(r);
+                if (r.indexOf("success") > -1) {
+                    // 删除成功后刷新整个菜品列表
+                    displayDish(); // 添加这行来刷新列表
+                    $("#njzpc").html("删除成功");
+                } else {
+                    $("#njzpc").html("删除失败");
+                }
+            },
+            error: function() {
+                $("#njzpc").html("删除请求失败");
+            }
+        });
+    }
+}
+
+
+
+function verifyInput() {
+    // 获取表单值
+    var did = $("#did").val();
+    var dname = $("#dname").val();
+    var dprice = $("#dprice").val();
+    var rname = $("#rname").val();
+    var typeid = $("#typeid").val();
+
+    // 验证菜品ID
+    if (!isNumStr(did) || did < 1 || did > 99999) {
+        $("#njzpc").html("无效的菜品ID，范围：1-99999");
+        return ;
+    }
+
+    // 验证菜品名称
+    if (dname.trim() === "") {
+        $("#njzpc").html("菜品名称不能为空");
+        return ;
+    }
+
+    // 验证菜品价格
+    if (!isNumStr(dprice) || parseFloat(dprice) <= 0 || parseFloat(dprice) > 9999) {
+        $("#njzpc").html("无效的价格，范围：0.01-9999");
+        return ;
+    }
+
+    // 验证商家名称
+    if (rname.trim() === "") {
+        $("#njzpc").html("商家名称不能为空");
+        return ;
+    }
+    // 验证菜品类型
+     if (typeid.trim() === "") {
+        $("#njzpc").html("请选择菜品类型");
+        return;
+    }
+    $("#njzpc").html("数据验证通过");
+
+
+
+
+ var action = $("#action").val();
+
+ 	//	todo 函数执行完后，action会自动消除 后续需要注意的问题
+	//  把url,type action 放在函数外 作为全局变量
+
+    $.ajax({
+         //后端doPost是增加，doPut是修改
+        type: action == "insert" ? "post" : "put",
+        url: "api/dish/"+action == "insert" ? "post" : "put",
+        data: new FormData($('#dishForm')[0]),
+        processData: false,  // 必须设置为false
+        contentType: false,  // 必须设置为false
+        success: function(r) {
+            console.log(r);
+             if (r.indexOf("success") > -1) {
+                    $("#njzpc").html(action == "insert" ? "增加成功" : "修改成功");
+                    if (action == "update") {
+                        $("#btnZpc").html("增加");
+                        $("#action").val("insert");
+                    }
+                    displayDish();
+                } else if (r.indexOf("exist") > -1) {
+                    $("#njzpc").html("菜品已经存在");
+                } else {
+                    $("#njzpc").html(action == "insert" ? "增加失败" : "修改失败");
+                }
+            },
+		// error(x):
+		// 		console.log(x);
+        });
+
+    }
+
+
+
+
+
+
+// 编辑菜品
+function editDish(did, dname, dprice,rname) {
+	console.log(did, dname, dprice, rname);
+    document.getElementById("did").value = did;
+    document.getElementById("dname").value = dname;
+    document.getElementById("dprice").value = dprice;
+    document.getElementById("rname").value = rname;
+
+    // 区分新增或更新
+    document.getElementById("btnZpc").innerHTML = "修改";
+    document.getElementById("action").value = "update";
+    document.getElementById("olddid").value = did;
+
+}
+
+
+
+
+
+
+</script>

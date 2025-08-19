@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自定义菜单树组件</title>
+    <link rel="stylesheet" href="js/bootstrap/dist/css/bootstrap.min.css">
+    <script src="js/jquery/dist/jquery.min.js"></script>
+    <script src="js/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="js/my.js"></script>
+    <link rel="stylesheet" href="https://cdn.staticfile.net/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style>
+        .nav-tabs {
+            margin-bottom: 15px;
+        }
+        .error-message {
+            color: red;
+            margin-bottom: 10px;
+        }
+        .success-message {
+            color: green;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-6 col-md-offset-3">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <ul class="nav nav-tabs">
+                        <li class="active"><a href="#login2" data-toggle="tab">登录</a></li>
+                        <li><a href="#register" data-toggle="tab">注册</a></li>
+                    </ul>
+                </div>
+                <div class="panel-body">
+                    <div class="tab-content">
+                        <!-- 登录表单 -->
+                        <div class="tab-pane active" id="login2">
+                            <div id="loginError" class="error-message"></div>
+
+                            <input type="hidden" name="action" value="login">
+                            <div class="form-group">
+                                <label for="loginname">账户名</label>
+                                <input type="text" class="form-control" id="loginname" name="name" value="zpc" >
+                            </div>
+
+                            <div class="form-group">
+                                <label for="logincode">密码</label>
+                                <input type="password1" class="form-control" id="logincode" name="code" value="zpc123456@" >
+                            </div>
+
+                            <div class="form-group">
+                                <label for="userType">用户类型</label>
+                                <select  class="form-control" id="userType" name="userType" >
+                                    <option value="admin" >管理员</option>
+                                    <option value="seller">商家</option>
+                                    <option value="customer">用户</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-primary"  onclick="login()">登录</button>
+                        </div>
+
+                        <!-- 注册表单 -->
+                        <div class="tab-pane" id="register">
+
+                            <div id="registerError" class="error-message"></div>
+                            <input type="hidden" name="action" value="register">
+
+                            <!-- 公共字段：所有用户类型都需要的字段 -->
+                            <div class="form-group">
+                                <label for="regname">名称</label>
+                                <input type="text" class="form-control" id="regname" name="regname" placeholder="输入账号" value="AAA">
+                            </div>
+                            <div class="form-group">
+                                <label for="regcode">密码</label>
+                                <input type="password1" class="form-control" id="regcode" name="code" placeholder="输入密码" value="zpc123456@">
+                            </div>
+                            <div class="form-group">
+                                <label for="regConfirmPass">确认密码</label>
+                                <input type="password1" class="form-control" id="regConfirmPass" placeholder="再次输入密码" value="zpc123456@">
+                            </div>
+
+                            <!-- 商家专属字段：默认隐藏，选择商家时显示 -->
+                            <div class="form-group seller-fields" style="display: none;">
+                                <label for="regraddress">餐厅地址</label>
+                                <input type="text" class="form-control" id="regraddress" name="regraddress" placeholder="输入餐厅地址" value="城北花园">
+                            </div>
+                            <div class="form-group seller-fields" style="display: none;">
+                                <label for="regrphone">餐厅电话</label>
+                                <input type="text" class="form-control" id="regrphone" name="rphone" placeholder="输入餐厅电话" value="13888888888">
+                            </div>
+
+                            <!-- 用户专属字段：默认隐藏，选择用户时显示（示例：添加用户手机号） -->
+                            <div class="form-group customer-fields" style="display: none;">
+                                <label for="regcaddress">用户地址</label>
+                                <input type="text" class="form-control" id="regcaddress" name="regcaddress" placeholder="输入送餐地址" value="城北花园">
+                            </div>
+
+                            <div class="form-group customer-fields" style="display: none;">
+                                <label for="regcphone">用户手机号</label>
+                                <input type="text" class="form-control" id="regcphone" name="regcphone" placeholder="输入个人手机号" value="13999999999">
+                            </div>
+
+                            <!--                            <div class="form-group seller-fields" style="display: none;">-->
+                            <!--                                <label for="regraddress">订餐时间</label>-->
+                            <!--                                <input type="text" class="form-control" id="regraddress" name="raddress" placeholder="输入餐厅地址" value="城北花园">-->
+                            <!--                            </div>-->
+
+                            <!-- 用户类型选择 -->
+                            <div class="form-group">
+                                <label for="userTypeRgs">用户类型</label>
+                                <select class="form-control" id="userTypeRgs" name="userTypeRgs">
+                                    <option value="seller">商家</option>
+                                    <option value="customer">用户</option>
+                                </select>
+                            </div>
+
+                            <!-- 注册按钮（移到最后，位置更合理） -->
+                            <button type="button" class="btn btn-primary" onclick="zhuche()">注册</button>
+                        </div>
+
+                    </div>
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 监听用户类型选择变化
+    $('#userTypeRgs').change(function() {
+        let userType = $(this).val();
+
+        // 隐藏所有类型的专属字段
+        $('.seller-fields, .customer-fields').hide();
+
+        // 根据选择显示对应字段
+        if (userType === 'seller') {
+            // 显示商家专属字段
+            $('.seller-fields').show();
+        } else if (userType === 'customer') {
+            // 显示用户专属字段
+            $('.customer-fields').show();
+        }
+    });
+
+    // 页面加载时触发一次change事件，确保默认选项对应的字段正确显示
+    $('#userTypeRgs').trigger('change');
+</script>
+
+<script>
+
+    // 登录表单验证
+    function login() {
+        console.log("登录函数开始执行");
+
+        var userType = $("#userType").val();
+
+        var name = $('#loginname').val();
+        var code = $('#logincode').val();
+
+
+        if (!name || !code) {
+            console.warn("用户名或密码为空");
+            $('#loginError').html("用户名或密码不能为空");
+            return;
+        }
+
+        console.log("用户名:", name, "密码:", code);
+        $.ajax({
+            type: "post",
+            // url: "/user",
+            url: "user/login",
+            data: {
+                // action: "login",//
+                name: name,
+                code: code,
+                userType:userType,
+            },
+            success: function(response) {
+                console.log("API响应:", response);
+
+                if(response.includes("success")) {
+
+                    sessionStorage.setItem("userType",userType)
+                    sessionStorage.setItem("name",name)
+                    console.log("登录成功，准备跳转");
+                    $('#loginError').html("登录成功,稍后带你到功能界面...")
+                        .removeClass('error-message')
+                        .addClass('success-message');
+
+                    // 测试直接跳转
+                    console.log("尝试直接跳转..");
+                    if (userType == "admin"){
+                        setTimeout(function() {
+                            console.log("执行跳转至 管理主页");
+                            window.location.href = 'index.html';
+                        }, 1000);
+                        return;
+                    }
+                    if (userType == "seller"){
+
+                        //todo
+                        // sessionStorage.setItem("userType",userType)
+                        // sessionStorage.setItem("name",name)
+                        setTimeout(function() {
+                            console.log("执行跳转至菜单管理");
+                            window.location.href = 'sellerPage.html';
+                        }, 1000);
+                        return;
+                    }
+                    if (userType == "customer"){
+
+                        setTimeout(function() {
+                            console.log("执行跳转至菜单");
+                            window.location.href = 'customerPage.html'
+                        }, 1000);
+                        return;
+                    }
+                    else {
+                        console.warn("未知用户类型:", userType);
+                        $('#loginError').html("登录失败：未知用户类型");
+                    }
+                } else {
+                    console.warn("登录失败:", response);
+
+                    $('#loginError')
+                        .html("注册失败"+response.msg) // 显示后端返回的具体错误（如“用户名已存在”）
+                        .removeClass('success-message')
+                        .addClass('error-message'); // 失败用红色
+                }
+            },
+            error: function(xhr) {
+                console.error("请求失败:", xhr.status, xhr.statusText);
+                $('#loginError').html("登录请求失败");
+            }
+        });
+    }
+
+
+
+    // 注册表单验证
+    function zhuche() {
+        var name=$('#regname').val();
+        var code=$('#regcode').val();
+        var raddress=$('#regraddress').val();
+        var rphone=$('#regrphone').val();
+        var ConfirmPass=$('#regConfirmPass').val();
+        var userTypeRgs = $("#userTypeRgs").val();
+        // 补充变量定义// 获取用户类型
+        var caddress = $('#regcaddress').val();     // 获取用户地址
+        var cphone = $('#regcphone').val();         // 获取用户手机号
+        if(name==""||code==""){
+            $('#registerError').html("用户名或密码不能为空");
+            return  ;}
+
+        if(code!=ConfirmPass){
+            $('#registerError').html("两次输入的密码不一致");
+            return  ;}
+
+        if (!isPassStr(code)) {
+            $('#registerError').html( "密码必须包含数字、字母、特殊字符(@或#),且长度在8-12位之间");
+            return;
+        }
+
+        // 发送AJAX请求（使用动态URL）
+        $.ajax({
+            type: "post",
+            url: "user/register",
+            // url: "/user",
+            data: {
+
+                action: "register", // 保留action标识（可选，根据后端需求）
+                name: name,
+                code: code,
+                userType:userTypeRgs,
+                // 注意：不同类型对应字段，按需调整
+                ...(userTypeRgs == "seller" ? { raddress: raddress, rphone: rphone}
+                    : {caddress:caddress,cphone: cphone}),
+            },
+            success: function(response) {
+                // 处理逻辑（同上）
+                if (response.includes("success")) {
+                    console.log("注册成功");
+                    $('#registerError').html("注册成功");
+                }else {
+                    console.warn("注册失败:", response);
+                    $('#registerError')
+                        .html("注册失败"+response.msg) // 显示后端返回的具体错误（如“用户名已存在”）
+                        .removeClass('success-message')
+                        .addClass('error-message'); // 失败用红色
+                }
+            },
+            error: function(xhr) {
+                // console.error("请求失败:", xhr.status, xhr.statusText);
+                $('#registerError').html("登录请求失败，请检查网络");
+            }
+        });
+
+    }
+
+    // 清除错误信息
+    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+        document.getElementById('loginError').innerHTML = "";
+        document.getElementById('registerError').innerHTML = "";
+    });
+</script>
+</body>
+</html>
